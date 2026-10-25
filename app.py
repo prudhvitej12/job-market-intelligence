@@ -1,6 +1,7 @@
 import streamlit as st
 import mysql.connector
 import re
+import plotly.express as px
 
 # -----------------------------
 # Page Configuration
@@ -263,11 +264,27 @@ for job in filtered_jobs:
 
     location_counts[location] += 1
 
-
+st.write("Total matching jobs:", len(filtered_jobs))
+st.write("Location counts:", location_counts)
 if location_counts:
+    chart_data = [
+        {"Location": location, "Jobs": count}
+        for location, count in location_counts.items()
+    ]
 
-    st.bar_chart(location_counts)
+    fig = px.bar(
+        x=list(location_counts.keys()),
+        y=list(location_counts.values()),
+        labels={"x": "Location", "y": "Jobs"},
+        color_discrete_sequence=["#4DA6FF"]
+    )
 
+    fig.update_layout(
+        height=350,
+        xaxis_tickangle=0
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
     top_filtered_location = max(
         location_counts,
         key=location_counts.get
@@ -287,43 +304,60 @@ st.header("💰 Average Salary by Job Title")
 salary_by_title = {}
 
 for job in filtered_jobs:
-
     title = job["job_title"]
+    salary = job["average_salary"]
 
-    if title not in salary_by_title:
-        salary_by_title[title] = []
+    if salary is not None:
+        if title not in salary_by_title:
+            salary_by_title[title] = []
 
-    salary_by_title[title].append(
-        job["average_salary"]
-    )
-
+        salary_by_title[title].append(float(salary))
 
 average_salary_by_title = {}
 
 for title, salaries in salary_by_title.items():
-
-    average_salary_by_title[title] = (
-        sum(salaries) / len(salaries)
-    )
-
+    if salaries:
+        average_salary_by_title[title] = sum(salaries) / len(salaries)
 
 if average_salary_by_title:
+    chart_data = [
+        {
+            "Job Title": title,
+            "Average Salary (LPA)": salary
+        }
+        for title, salary in average_salary_by_title.items()
+    ]
 
-    st.bar_chart(average_salary_by_title)
+    
 
+    fig = px.bar(
+    chart_data,
+    x="Job Title",
+    y="Average Salary (LPA)",
+    title="Average Salary by Job Title"
+    )
+
+    fig.update_layout(
+        height=400,
+        xaxis_tickangle=0
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
     highest_paying_title = max(
         average_salary_by_title,
         key=average_salary_by_title.get
     )
 
-    highest_title_salary = (
-        average_salary_by_title[highest_paying_title]
-    )
+    highest_title_salary = average_salary_by_title[highest_paying_title]
 
     st.success(
         f"💰 **{highest_paying_title}** has the highest "
         f"average salary at **{highest_title_salary:.1f} LPA**."
     )
+else:
+    st.info("No salary data available for the selected filters.")
+
+    
 
 
 # -----------------------------
